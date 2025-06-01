@@ -1,0 +1,112 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Thenuki Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-4">Hotel Thenuki Chatbot</h1>
+        <div id="chat-container" class="h-96 overflow-y-auto border p-4 mb-4 rounded-lg bg-gray-50"></div>
+        <div class="flex">
+            <input type="text" id="user-input" class="flex-1 p-2 border rounded-l-lg focus:outline-none" placeholder="Type your message...">
+            <button id="send-btn" class="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `p-2 mb-2 rounded-lg ${isUser ? 'bg-blue-100 text-right' : 'bg-gray-200'}`;
+            messageDiv.textContent = message;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleUserInput() {
+            const input = userInput.value.trim().toLowerCase();
+            if (!input) return;
+
+            addMessage(input, true);
+            userInput.value = '';
+
+            // Bot responses
+            let response = "I'm sorry, I didn't understand that. Could you please clarify?";
+            if (input.includes('hello') || input.includes('hi')) {
+                response = "Welcome to Hotel Thenuki! How can I assist you today?";
+            } else if (input.includes('room') && input.includes('available')) {
+                response = "We have Deluxe Rooms and Suites available. Would you like to know more about our room types or check availability for specific dates?";
+            } else if (input.includes('price') || input.includes('cost')) {
+                response = "Our room rates start at $100 per night for Deluxe Rooms and $200 for Suites. Prices vary by season. Would you like a quote for specific dates?";
+            } else if (input.includes('contact') || input.includes('phone')) {
+                response = "You can reach us at +1-800-THENUKI or email info@hotelthenuki.com. How else can I help?";
+            } else if (input.includes('amenities') || input.includes('facilities')) {
+                response = "Hotel Thenuki offers a pool, spa, gym, and free Wi-Fi. Dining options include our rooftop restaurant and 24/7 room service. Anything specific you'd like to know about?";
+            } else if (input.includes('book') || input.includes('reservation')) {
+                response = "To make a reservation, please visit our website at www.hotelthenuki.com/book or call us at +1-800-THENUKI. Would you like assistance with the booking process?";
+            } else if (input.includes('check-in') || input.includes('check in') || input.includes('check-out') || input.includes('check out')) {
+                response = "Check-in is at 3:00 PM, and check-out is at 11:00 AM. Early check-in or late check-out may be available upon request, subject to availability. Would you like to arrange this?";
+            } else if (input.includes('location') || input.includes('address') || input.includes('where')) {
+                response = "Hotel Thenuki is located at 123 Paradise Lane, Colombo, Sri Lanka. We're just 10 minutes from the city center and 45 minutes from Bandaranaike International Airport. Need directions or transport options?";
+            } else if (input.includes('cancel') || input.includes('cancellation')) {
+                response = "Cancellations can be made up to 48 hours before arrival for a full refund. Please check your booking confirmation or contact us at +1-800-THENUKI for assistance. Would you like help with a specific booking?";
+            }
+
+            setTimeout(() => addMessage(response), 500);
+        }
+
+        sendBtn.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUserInput();
+        });
+
+        // Initial greeting
+        addMessage("Hello! Welcome to Hotel Thenuki. How can I assist you today?");
+    </script>
+</body>
+</html>
